@@ -2,7 +2,7 @@
 // 模块名: 日志钩子函数
 // 模块功能简介: 会在日志执行format之前调用注册到日志中的钩子函数中的fire函数
 
-package chaoslog
+package log
 
 import (
 	"fmt"

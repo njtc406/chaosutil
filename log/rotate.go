@@ -1,4 +1,4 @@
-package chaoslog
+package log
 
 import (
 	"github.com/lestrrat-go/file-rotatelogs"
