@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023. YR. All rights reserved
+ */
+
 package network
 
 import (
