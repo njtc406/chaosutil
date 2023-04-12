@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/njtc406/chaosutil/log"
-	"github.com/njtc406/chaosutil/network_bak"
+	"github.com/njtc406/chaosutil/network"
 	"reflect"
 )
 
@@ -24,7 +24,7 @@ type JsonProcessor struct {
 	unknownMessageHandler UnknownMessageJsonHandler
 	connectHandler        ConnectJsonHandler
 	disconnectHandler     ConnectJsonHandler
-	network_bak.INetMempool
+	network.INetMempool
 	logger log.ILogger
 }
 
@@ -36,7 +36,7 @@ type JsonPackInfo struct {
 
 func NewJsonProcessor() *JsonProcessor {
 	processor := &JsonProcessor{mapMsg: map[uint16]MessageJsonInfo{}}
-	processor.INetMempool = network_bak.NewMemAreaPool()
+	processor.INetMempool = network.NewMemAreaPool()
 
 	return processor
 }

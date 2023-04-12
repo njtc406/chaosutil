@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/njtc406/chaosutil/network_bak"
+	"github.com/njtc406/chaosutil/network"
 	"reflect"
 )
 
@@ -26,7 +26,7 @@ type PBProcessor struct {
 	unknownMessageHandler UnknownMessageHandler
 	connectHandler        ConnectHandler
 	disconnectHandler     ConnectHandler
-	network_bak.INetMempool
+	network.INetMempool
 }
 
 type PBPackInfo struct {
@@ -37,7 +37,7 @@ type PBPackInfo struct {
 
 func NewPBProcessor() *PBProcessor {
 	processor := &PBProcessor{mapMsg: map[uint16]MessageInfo{}}
-	processor.INetMempool = network_bak.NewMemAreaPool()
+	processor.INetMempool = network.NewMemAreaPool()
 	return processor
 }
 

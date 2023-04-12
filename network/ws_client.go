@@ -1,4 +1,4 @@
-package network_bak
+package network
 
 import (
 	"github.com/gorilla/websocket"

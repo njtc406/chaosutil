@@ -2,7 +2,7 @@
  * Copyright (c) 2023. YR. All rights reserved
  */
 
-package network_bak
+package network
 
 import (
 	"github.com/njtc406/chaosutil/log"
@@ -31,7 +31,7 @@ type TCPServer struct {
 	ReadTimeOut   time.Duration // 读超时
 	WriteTimeOut  time.Duration // 写超时
 
-	NewAgent      GetAgentFun
+	NewAgent      GetAgentFun  // 获取代理
 	ln            net.Listener // 监听器
 	connPool      ConnSet      // 连接池
 	mutexConnPool sync.Mutex   // 连接锁
@@ -39,7 +39,7 @@ type TCPServer struct {
 	wgConnPool    sync.WaitGroup
 
 	logger log.ILogger // 日志的记录器
-	// msgParser 消息的解析器
+	//msgParser 消息的解析器
 	MsgParser
 }
 
@@ -117,7 +117,7 @@ func (server *TCPServer) run() {
 	for {
 		conn, err := server.ln.Accept()
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+			if _, ok := err.(net.Error); ok {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
 				} else {
@@ -133,7 +133,7 @@ func (server *TCPServer) run() {
 			return
 		}
 
-		conn.(*net.TCPConn).SetNoDelay(true)
+		conn.(*net.TCPConn).SetNoDelay(true) // 设置数据是否立即发送(true无延迟)
 		tempDelay = 0
 
 		server.mutexConnPool.Lock()

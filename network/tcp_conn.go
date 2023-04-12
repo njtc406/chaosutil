@@ -1,4 +1,4 @@
-package network_bak
+package network
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ type TCPConn struct {
 	conn      net.Conn
 	writeChan chan []byte
 	closeFlag bool
-	msgParser *MsgParser
+	msgParser *MsgParser // 消息解析器
 
 	logger log.ILogger
 }
