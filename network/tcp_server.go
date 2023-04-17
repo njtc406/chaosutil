@@ -24,6 +24,7 @@ const (
 
 type GetAgentFun func(*TCPConn) Agent
 
+// TODO 封装的太多,需要简化一下
 type TCPServer struct {
 	Addr          string        // 服务器监听地址
 	MaxConnNum    int           // 支持的最大连接数量
