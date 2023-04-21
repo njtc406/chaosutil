@@ -160,14 +160,32 @@ type DefaultLogger struct {
 	Writer io.WriteCloser
 }
 
-// NewDefaultLogger 创建一个通过日志对象(filePath为空时,默认输出到stdout)
-func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level int, withCaller, withColors, openStdout bool) *DefaultLogger {
+// NewDefaultLogger 创建一个通过日志对象(filePath为空时,默认只输出到stdout)
+// filePath 日志文件名(最终文件名会是 filePath_20060102150405.log)
+// maxAge 最大存放时间(过期会自动删除)
+// rotationTime 自动切分间隔(到期日志自动切换新文件)
+// level 日志级别(小于设置级别的信息都会被记录打印)
+// withCaller 是否需要调用者信息
+// fullCaller 如果需要打印调用者信息,那么这个参数可以设置调用者信息的详细程度
+// withColors 是否需要信息的颜色(基本上只能用于linux的前台打印)
+// openStdout 是否开启标准输出(如果filePath为空,且openStdout未开启,那么将不会有任何日志信息被记录)
+func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) *DefaultLogger {
 	logger := &DefaultLogger{}
 	if len(filePath) > 0 {
+		if rotationTime < time.Second*60 || rotationTime > time.Hour*24 {
+			panic("rotationTime must >= 1min and <= 24hour")
+		}
+		pattern := "_%Y%m%d.log"
+		if rotationTime < time.Minute*60 {
+			pattern = "_%Y%m%d%H%M.log"
+		} else if rotationTime < time.Hour*24 {
+			pattern = "_%Y%m%d%H.log"
+		}
 		if w, err := rotateNew(
 			filePath,
 			WithMaxAge(maxAge),
 			WithRotationTime(rotationTime),
+			WithPattern(pattern),
 		); err != nil {
 			panic(err)
 		} else {
@@ -177,15 +195,21 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 		logger.Writer = os.Stdout
 	}
 
+	if level > 6 {
+		panic("log level must <= 6")
+	}
+
 	logger.Logger = New(
 		WithLevel(logrus.Level(level)),
 		WithCaller(withCaller),
 		WithColor(withColors),
 		WithOut(logger.Writer),
+		WithFullCaller(fullCaller),
 	)
 	if openStdout && len(filePath) > 0 {
 		logger.Logger.SetOutput(io.MultiWriter(os.Stdout, logger.Writer))
 	}
+	// 由于是追加模式,所以默认为无锁
 	logger.Logger.SetNoLock()
 
 	return logger

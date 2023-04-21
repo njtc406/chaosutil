@@ -13,15 +13,15 @@ import (
 var (
 	colorPre = "\033["
 	colorSuf = "\033[0m"
-	colorMap = map[logrus.Level]string{
-		logrus.PanicLevel: "1;36m",
-		logrus.FatalLevel: "1;35m",
-		logrus.ErrorLevel: "1;31m",
-		logrus.WarnLevel:  "1;33m",
-		logrus.InfoLevel:  "1;37m",
-		logrus.DebugLevel: "1;32m",
-		logrus.TraceLevel: "1;34m",
-	}
+	//colorMap = map[logrus.Level]string{
+	//	logrus.PanicLevel: "1;36m",
+	//	logrus.FatalLevel: "1;35m",
+	//	logrus.ErrorLevel: "1;31m",
+	//	logrus.WarnLevel:  "1;33m",
+	//	logrus.InfoLevel:  "1;37m",
+	//	logrus.DebugLevel: "1;32m",
+	//	logrus.TraceLevel: "1;34m",
+	//}
 )
 
 const (
@@ -87,7 +87,7 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	// write level
 	b.WriteString(" [")
 	if f.Colors {
-		fmt.Fprintf(b, "%s%s", colorPre, getColorByLevel(entry.Level))
+		_, _ = fmt.Fprintf(b, "%s%s", colorPre, getColorByLevel(entry.Level))
 	}
 	b.WriteString(strings.ToUpper(entry.Level.String()))
 	if f.Colors {
@@ -151,16 +151,16 @@ func (f *Formatter) SetCallerDisable(status bool) {
 func (f *Formatter) SetFullCaller(status bool) {
 	f.Mu.Lock()
 	defer f.Mu.Unlock()
-	f.NoCaller = status
+	f.FullCaller = status
 }
 
 func (f *Formatter) writeCaller(b *bytes.Buffer, entry *logrus.Entry) {
 	// TODO 后面在看需不需要根据日志等级来控制某些等级的日志不需要caller信息
 	if entry.HasCaller() {
 		if f.CustomCallerFormatter != nil {
-			fmt.Fprintf(b, f.CustomCallerFormatter(entry.Caller))
+			_, _ = fmt.Fprintf(b, f.CustomCallerFormatter(entry.Caller))
 		} else {
-			fmt.Fprintf(
+			_, _ = fmt.Fprintf(
 				b,
 				"(file: %s:%d function: %s) >> ",
 				entry.Caller.File,
@@ -175,9 +175,9 @@ func (f *Formatter) writeSimpleCaller(b *bytes.Buffer, entry *logrus.Entry) {
 	// TODO 后面在看需不需要根据日志等级来控制某些等级的日志不需要caller信息
 	if entry.HasCaller() {
 		if f.CustomCallerFormatter != nil {
-			fmt.Fprintf(b, f.CustomCallerFormatter(entry.Caller))
+			_, _ = fmt.Fprintf(b, f.CustomCallerFormatter(entry.Caller))
 		} else {
-			fmt.Fprintf(
+			_, _ = fmt.Fprintf(
 				b,
 				"%s:%d >> ",
 				entry.Caller.File,
@@ -231,9 +231,9 @@ func (f *Formatter) writeOrderedFields(b *bytes.Buffer, entry *logrus.Entry) {
 
 func (f *Formatter) writeField(b *bytes.Buffer, entry *logrus.Entry, field string) {
 	if f.HideKeys {
-		fmt.Fprintf(b, "[%v]", entry.Data[field])
+		_, _ = fmt.Fprintf(b, "[%v]", entry.Data[field])
 	} else {
-		fmt.Fprintf(b, "[%s=%v]", field, entry.Data[field])
+		_, _ = fmt.Fprintf(b, "[%s=%v]", field, entry.Data[field])
 	}
 
 	b.WriteString(" ")

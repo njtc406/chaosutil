@@ -61,7 +61,7 @@ func WithRotationTime(d time.Duration) ROption {
 
 func defaultOpt() *options {
 	return &options{
-		Pattern:      `.%Y%m%d`,
+		Pattern:      `_%Y%m%d.log`,
 		MaxAge:       15 * 24 * time.Hour,
 		RotationTime: 24 * time.Hour,
 	}
