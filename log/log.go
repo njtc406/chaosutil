@@ -160,8 +160,8 @@ type DefaultLogger struct {
 	Writer io.WriteCloser
 }
 
-// NewDefaultLogger 创建一个通过日志对象(filePath为空时,默认只输出到stdout)
-// filePath 日志文件名(最终文件名会是 filePath_20060102150405.log)
+// NewDefaultLogger 创建一个通用日志对象
+// filePath 日志文件名(最终文件名会是 filePath_20060102150405.log)(filePath为空且开启标准输出的情况下默认输出到stdout,否则无任何输出)
 // maxAge 最大存放时间(过期会自动删除)
 // rotationTime 自动切分间隔(到期日志自动切换新文件)
 // level 日志级别(小于设置级别的信息都会被记录打印)
