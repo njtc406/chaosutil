@@ -72,6 +72,13 @@ func WithCaller(caller bool) Option {
 	}
 }
 
+// WithFullCaller sets print full caller info
+func WithFullCaller(full bool) Option {
+	return func(logger *Logger) {
+		logger.Formatter.(*Formatter).SetFullCaller(full)
+	}
+}
+
 func WithTimeFormat(formatStr string) Option {
 	return func(logger *Logger) {
 		logger.Formatter.(*Formatter).SetTimestampFormat(formatStr)

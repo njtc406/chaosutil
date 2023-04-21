@@ -58,6 +58,9 @@ type Formatter struct {
 	// NoCaller - disable print caller info
 	NoCaller bool
 
+	// FullCaller - print full caller info
+	FullCaller bool
+
 	// CustomCallerFormatter - set custom formatter for caller info
 	CustomCallerFormatter func(*runtime.Frame) string
 
@@ -94,7 +97,12 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// write caller
 	if !f.NoCaller {
-		f.writeCaller(b, entry)
+		if f.FullCaller {
+			f.writeCaller(b, entry)
+		} else {
+			f.writeSimpleCaller(b, entry)
+		}
+
 	}
 
 	// write fields
@@ -139,6 +147,13 @@ func (f *Formatter) SetCallerDisable(status bool) {
 	f.NoCaller = status
 }
 
+// SetFullCaller 开启详细调用者信息打印(默认关闭)
+func (f *Formatter) SetFullCaller(status bool) {
+	f.Mu.Lock()
+	defer f.Mu.Unlock()
+	f.NoCaller = status
+}
+
 func (f *Formatter) writeCaller(b *bytes.Buffer, entry *logrus.Entry) {
 	// TODO 后面在看需不需要根据日志等级来控制某些等级的日志不需要caller信息
 	if entry.HasCaller() {
@@ -147,10 +162,26 @@ func (f *Formatter) writeCaller(b *bytes.Buffer, entry *logrus.Entry) {
 		} else {
 			fmt.Fprintf(
 				b,
-				"(file: %s:%d function: %s) ",
+				"(file: %s:%d function: %s) >> ",
 				entry.Caller.File,
 				entry.Caller.Line,
 				entry.Caller.Function,
+			)
+		}
+	}
+}
+
+func (f *Formatter) writeSimpleCaller(b *bytes.Buffer, entry *logrus.Entry) {
+	// TODO 后面在看需不需要根据日志等级来控制某些等级的日志不需要caller信息
+	if entry.HasCaller() {
+		if f.CustomCallerFormatter != nil {
+			fmt.Fprintf(b, f.CustomCallerFormatter(entry.Caller))
+		} else {
+			fmt.Fprintf(
+				b,
+				"%s:%d >> ",
+				entry.Caller.File,
+				entry.Caller.Line,
 			)
 		}
 	}
