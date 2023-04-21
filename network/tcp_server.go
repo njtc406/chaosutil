@@ -24,6 +24,14 @@ const (
 
 type GetAgentFun func(*TCPConn) Agent
 
+type TCPSvrConf struct {
+	Addr          string        // 服务器监听地址
+	MaxConnNum    int           // 支持的最大连接数量
+	WriteBuffSize int           // 写队列大小
+	ReadTimeOut   time.Duration // 读超时
+	WriteTimeOut  time.Duration // 写超时
+}
+
 // TODO 封装的太多,需要简化一下
 type TCPServer struct {
 	Addr          string        // 服务器监听地址
