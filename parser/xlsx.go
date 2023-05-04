@@ -8,158 +8,201 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
-var filePath = "./devices.xlsx"
-
-type APEObject struct {
-	Sn              string  `json:"-"`                         // 设备sn号
-	ApeID           string  `json:"ApeID,omitempty"`           // 设备ID(deviceID)
-	Name            string  `json:"Name,omitempty"`            // 名称
-	Model           string  `json:"Model,omitempty"`           // 型号
-	IPAddr          string  `json:"IPAddr,omitempty"`          // IP地址
-	IPV6Addr        string  `json:"IPV6Addr,omitempty"`        // IPv6地址
-	Port            int     `json:"Port,omitempty"`            // 端口号
-	Longitude       float64 `json:"Longitude,omitempty"`       // 经度
-	Latitude        float64 `json:"Latitude,omitempty"`        // 纬度
-	PlaceCode       string  `json:"PlaceCode,omitempty"`       // 安装地点行政区划代码
-	Place           string  `json:"Place,omitempty"`           // 位置名
-	OrgCode         string  `json:"OrgCode,omitempty"`         // 管辖单位代码
-	CapDirection    int     `json:"CapDirection,omitempty"`    // 车辆抓拍方向
-	MonitorDirect   string  `json:"MonitorDirect,omitempty"`   // 监视方向
-	MonitorAreaDesc string  `json:"MonitorAreaDesc,omitempty"` // 监视区域说明
-	IsOnline        string  `json:"IsOnline,omitempty"`        // 是否在线 (1在线 2离线 9其他)
-	OwnerApsID      string  `json:"OwnerApsID,omitempty"`      // 所属采集系统
-	UserId          string  `json:"UserId,omitempty"`          // 用户帐号
-	Password        string  `json:"Password,omitempty"`        // 口令
-	FunctionType    string  `json:"FunctionType,omitempty"`    // 功能类型
-	PositionType    string  `json:"PositionType,omitempty"`    // 摄像机位置类型
+type xlsxParser struct {
+	CanParsePrefix string                   // 可以被解析的标签页前缀 默认为"c_"
+	FilePath       string                   // 文件路径
+	StructObjMap   map[string]interface{}   // [标签页名称(不包含前缀)]标签对应的结构体值或者指针
+	RetObjMap      map[string][]interface{} // [标签页名称(不包含前缀)][]标签对应的结构体指针
 }
 
-type myField struct {
-	ColName    string
-	Value      *reflect.Value
-	IsRequired bool
+func NewXlsxParser() *xlsxParser {
+	return &xlsxParser{
+		CanParsePrefix: canParsePrefix,
+		FilePath:       "",
+		StructObjMap:   make(map[string]interface{}),
+		RetObjMap:      make(map[string][]interface{}),
+	}
 }
 
-func readXlsxFile(s interface{}) (list []interface{}) {
+func (x *xlsxParser) ParseXlsxFile() error {
+	xlFile, err := xlsx.OpenFile(x.FilePath)
+	if err != nil {
+		return err
+	}
+
+	for _, sheet := range xlFile.Sheets {
+		if x.CanParsePrefix == "" || strings.HasPrefix(sheet.Name, x.CanParsePrefix) {
+			labelName := strings.TrimPrefix(sheet.Name, x.CanParsePrefix)
+			var list []interface{}
+			x.RetObjMap[labelName] = list
+			err = parseSheet(sheet, x.StructObjMap[labelName], &list)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+type myCell struct {
+	colDesc    *string
+	colName    *string
+	isRequired bool
+}
+
+const canParsePrefix = `c_`
+
+// ParseXlsxFile 解析xlsx文件
+// xlsx文件中的所有标签页,默认带有"c_"前缀的的标签页才会被解析
+// xlsx的文件格式为(第一行为列名的字段中文说明,第二行为struct中的导出字段,第三行为字段选填属性,第四行为字段的类型)
+// filePath为文件路径(以执行程序所在位置的相对路径或者根目录为基准的全路径)
+// structObj为将要解析的结构对象(值或者指针均可)
+// 返回值为传入的*structObj类型的一个切片
+func ParseXlsxFile(filePath string, structObjMap map[string]interface{}) (map[string][]interface{}, error) {
+	ret := make(map[string][]interface{})
 	xlFile, err := xlsx.OpenFile(filePath)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return ret, err
 	}
 
-	// 只读取devices标签页
-	sheet, ok := xlFile.Sheet["devices"]
-	if !ok {
-		fmt.Println("not found devices sheet in xlsx file")
-		return
+	for _, sheet := range xlFile.Sheets {
+		if strings.HasPrefix(sheet.Name, canParsePrefix) {
+			structName := strings.TrimPrefix(sheet.Name, canParsePrefix)
+			var list []interface{}
+			ret[structName] = list
+			err = parseSheet(sheet, structObjMap[structName], &list)
+			if err != nil {
+				return ret, err
+			}
+		}
 	}
 
-	//tp := reflect.TypeOf(s)
-	var realType = reflect.TypeOf(s)
+	return ret, err
+}
+
+// parseSheet 解析标签页
+func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) error {
+	var realType = reflect.TypeOf(structObj)
 	if realType.Kind() == reflect.Ptr {
-		fmt.Println("11111111111111111111111")
 		realType = realType.Elem()
 	}
 
-	var nameMap = make(map[int]map[int]*myField)
+	var nameMap = make(map[int]map[int]*reflect.Value)
+	var descMap = make(map[int]*myCell)
 	// 解析列名称
-	row1 := sheet.Row(1) // 列名
-	//row3 := sheet.Row(2) // 是否必填
+	row0 := sheet.Row(0) // 字段中文说明
+	row2 := sheet.Row(2) // 是否必填
+	// 填充必填属性
+	for c := 0; c < len(row2.Cells); c++ {
+		cell, ok := descMap[c]
+		if !ok {
+			cell = &myCell{}
+			descMap[c] = cell
+		}
+		content := row2.Cells[c].String()
+		if content == "required" {
+			cell.isRequired = true
+		}
+	}
+	// 填充中文说明
+	for c := 0; c < len(row0.Cells); c++ {
+		cell, ok := descMap[c]
+		if !ok {
+			cell = &myCell{}
+			descMap[c] = cell
+		}
+		content := row0.Cells[c].String()
+		cell.colDesc = &content
+	}
+
+	row1 := sheet.Row(1) // 字段名称
+	//row3 := sheet.Row(3) // 字段类型(这个之后会做更多的类型)
 	for r := 4; r < sheet.MaxRow; r++ {
-		obj := reflect.New(realType)
-		//t := reflect.TypeOf(obj)
-		//fmt.Println()
+		// 创建一个新的对象
+		obj := reflect.New(realType).Interface()
+		// 获取对象的反射类型
+		t := reflect.TypeOf(obj)
+		// 获取对象的反射值
+		v := reflect.ValueOf(obj)
+
+		// 首先遍历字段名称,建立对应关系
 		for c := 0; c < len(row1.Cells); c++ {
 			content := row1.Cells[c].String()
-			//for i := 0; i < t.; i++ {
-			//	fmt.Println(t.Field(i).Name)
-			//}
-
-			rType := reflect.TypeOf(obj)
-			//rValue := reflect.ValueOf(obj)
-			for i := 0; i < rType.NumField(); i++ {
-				field := rType.Field(i)
-				//fmt.Println(field.Type)
+			for i := 0; i < t.Elem().NumField(); i++ {
+				field := t.Elem().Field(i)
+				// 如果配置的字段名称和结构的字段名称相同,那么认为是匹配的
 				if field.Name == content {
 					// 解析内容
-					vField := obj.Elem().Field(i)
-
+					vField := v.Elem().Field(i)
+					// 为正文内容的每一行都预先创建一个结构体,然后将结构体的反射保存下来,在后面读取正文时,按照对应位置直接设置值就好了
 					realMap, ok := nameMap[r]
 					if !ok {
-						nameMap[r] = make(map[int]*myField)
+						nameMap[r] = make(map[int]*reflect.Value)
 						realMap = nameMap[r]
 					}
-					realMap[c] = &myField{
-						ColName:    field.Name,
-						Value:      &vField,
-						IsRequired: false,
+					realMap[c] = &vField
+
+					// 填充字段名称
+					cell, ok := descMap[c]
+					if ok && cell.colName == nil {
+						cell.colName = &field.Name
 					}
 					break
 				}
 			}
 		}
-		//for c := 0; c < len(row3.Cells); c++ {
-		//	content := row3.Cells[c].String()
-		//	if content == "required" {
-		//		nameMap[r][c].IsRequired = true
-		//	}
-		//}
-		//list = append(list, obj)
+
+		*ret = append(*ret, obj)
 	}
 
+	// 解析正文内容
 	for r := 4; r < len(sheet.Rows); r++ {
 		for c := 0; c < len(sheet.Rows[r].Cells); c++ {
 			content := sheet.Rows[r].Cells[c].String()
+			info, ok := descMap[c]
+			if !ok {
+				return errors.New("unknown row")
+			}
+			if info.isRequired && len(content) == 0 {
+				return errors.New(fmt.Sprintf("%s[%s] is required, must be not empty\n", *info.colDesc, *info.colName))
+			}
+
 			realMap, ok := nameMap[r]
 			if !ok {
-				fmt.Println("unknown row")
-				return
+				return errors.New("unknown row")
 			}
 			if store, ok := realMap[c]; ok {
-				if store.IsRequired && len(content) == 0 {
-					fmt.Printf("%s is required, must be not empty", store.ColName)
-					return
-				}
-				switch store.Value.Kind() {
+				// 这里就是在给之前保存下来的反射设置值,目前只有几个基本类型,之后会逐渐扩充
+				switch store.Kind() {
 				case reflect.String:
-					store.Value.SetString(content)
+					store.SetString(content)
 				case reflect.Int:
-					v, e := strconv.ParseInt(content, 10, 10)
-					if e != nil {
-						fmt.Println(e)
-						return
+					v, err := strconv.ParseInt(content, 10, 10)
+					if err != nil {
+						return err
 					}
-					store.Value.SetInt(v)
+					store.SetInt(v)
 				case reflect.Float64:
-					v, e := strconv.ParseFloat(content, 8)
-					if e != nil {
-						fmt.Println(e)
-						return
+					v, err := strconv.ParseFloat(content, 8)
+					if err != nil {
+						return err
 					}
-					store.Value.SetFloat(v)
+					store.SetFloat(v)
 				default:
-					fmt.Println("unknown type of value")
+					return errors.New("unknown type of value")
 				}
 			}
 		}
 	}
 
-	return
-}
-
-func xlsxTest() {
-	list := readXlsxFile(APEObject{})
-	for _, v := range list {
-		switch v.(type) {
-		case *APEObject:
-			val := v.(*APEObject)
-			fmt.Printf("%+v", val)
-		}
-	}
+	return nil
 }
