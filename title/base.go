@@ -45,6 +45,10 @@ var title2 = `
                 ·▀▀▀ ▀▀▀ · ▀  ▀  ▀█▄▀▪ ▀▀▀▀ 
 `
 
+var title3 = `
+Entropy increase // 熵增
+`
+
 func EchoTitle() {
 	fmt.Print(fmt.Sprintf(title1, translate.Translate("Supported by"), translate.Translate("Version"), version))
 }
