@@ -117,6 +117,7 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 		cell.colDesc = &desc
 	}
 
+	// TODO 下面这段是可以优化的
 	row1 := sheet.Row(1) // 字段名称
 	//row3 := sheet.Row(3) // 字段类型(这个之后会做更多的类型)
 	for r := 4; r < sheet.MaxRow; r++ {
