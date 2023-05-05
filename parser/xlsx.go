@@ -101,27 +101,20 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 	// 解析列名称
 	row0 := sheet.Row(0) // 字段中文说明
 	row2 := sheet.Row(2) // 是否必填
-	// 填充必填属性
 	for c := 0; c < len(row2.Cells); c++ {
 		cell, ok := descMap[c]
 		if !ok {
 			cell = &myCell{}
 			descMap[c] = cell
 		}
-		content := row2.Cells[c].String()
-		if content == "required" {
+		// 填充必填属性
+		required := row2.Cells[c].String()
+		if required == "required" {
 			cell.isRequired = true
 		}
-	}
-	// 填充中文说明
-	for c := 0; c < len(row0.Cells); c++ {
-		cell, ok := descMap[c]
-		if !ok {
-			cell = &myCell{}
-			descMap[c] = cell
-		}
-		content := row0.Cells[c].String()
-		cell.colDesc = &content
+		// 填充中文说明
+		desc := row0.Cells[c].String()
+		cell.colDesc = &desc
 	}
 
 	row1 := sheet.Row(1) // 字段名称
