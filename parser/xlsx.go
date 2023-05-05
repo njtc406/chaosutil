@@ -42,11 +42,11 @@ func (x *xlsxParser) ParseXlsxFile() error {
 		if x.CanParsePrefix == "" || strings.HasPrefix(sheet.Name, x.CanParsePrefix) {
 			labelName := strings.TrimPrefix(sheet.Name, x.CanParsePrefix)
 			var list []interface{}
-			x.RetObjMap[labelName] = list
 			err = parseSheet(sheet, x.StructObjMap[labelName], &list)
 			if err != nil {
 				return err
 			}
+			x.RetObjMap[labelName] = list
 		}
 	}
 
@@ -78,11 +78,11 @@ func ParseXlsxFile(filePath string, structObjMap map[string]interface{}) (map[st
 		if strings.HasPrefix(sheet.Name, canParsePrefix) {
 			structName := strings.TrimPrefix(sheet.Name, canParsePrefix)
 			var list []interface{}
-			ret[structName] = list
 			err = parseSheet(sheet, structObjMap[structName], &list)
 			if err != nil {
 				return ret, err
 			}
+			ret[structName] = list
 		}
 	}
 
@@ -173,7 +173,7 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 				return errors.New("unknown row")
 			}
 			if info.isRequired && len(content) == 0 {
-				return errors.New(fmt.Sprintf("%s[%s] is required, must be not empty\n", *info.colDesc, *info.colName))
+				return errors.New(fmt.Sprintf("%s[%s] is required and cannot be empty\n", *info.colDesc, *info.colName))
 			}
 
 			realMap, ok := nameMap[r]
@@ -198,7 +198,7 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 					}
 					store.SetFloat(v)
 				default:
-					return errors.New("unknown type of value")
+					return errors.New("unknown type value")
 				}
 			}
 		}

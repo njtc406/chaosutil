@@ -39,7 +39,6 @@ type APEObject struct {
 }
 
 func TestNewXlsxParser(t *testing.T) {
-	fmt.Println("-----------")
 	parser := NewXlsxParser()
 	parser.FilePath = "./devices.xlsx"
 	parser.StructObjMap["devices"] = APEObject{}
@@ -47,8 +46,6 @@ func TestNewXlsxParser(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Println("======================")
 
 	for _, v := range parser.RetObjMap {
 		for _, obj := range v {
