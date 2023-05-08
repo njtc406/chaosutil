@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -159,15 +158,17 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 	}
 
 	// 解析正文内容
+	var cellData *xlsx.Cell
 	for r := 4; r < len(sheet.Rows); r++ {
 		for c := 0; c < len(sheet.Rows[r].Cells); c++ {
-			content := sheet.Rows[r].Cells[c].String()
+			cellData = sheet.Rows[r].Cells[c]
+			content := cellData.String()
 			info, ok := descMap[c]
 			if !ok {
 				return errors.New("unknown row")
 			}
 			if info.isRequired && len(content) == 0 {
-				return errors.New(fmt.Sprintf("%s[%s] is required and cannot be empty\n", *info.colDesc, *info.colName))
+				return errors.New(fmt.Sprintf("row[%d] %s[%s] is required and cannot be empty\n", r+1, *info.colDesc, *info.colName))
 			}
 
 			realMap, ok := nameMap[r]
@@ -179,20 +180,23 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 				switch store.Kind() {
 				case reflect.String:
 					store.SetString(content)
-				case reflect.Int:
-					v, err := strconv.ParseInt(content, 10, 10)
+				case reflect.Int64, reflect.Int:
+					v, err := cellData.Int64()
 					if err != nil {
 						return err
 					}
 					store.SetInt(v)
 				case reflect.Float64:
-					v, err := strconv.ParseFloat(content, 8)
+					v, err := cellData.Float()
 					if err != nil {
 						return err
 					}
+
 					store.SetFloat(v)
+				case reflect.Bool:
+					store.SetBool(cellData.Bool())
 				default:
-					return errors.New("unknown type value")
+					return errors.New(fmt.Sprintf("row[%d] cell[%s] unknown type value", r+1, *info.colDesc))
 				}
 			}
 		}
