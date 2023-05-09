@@ -10,7 +10,7 @@
 package translate
 
 func init() {
-	register(ZH_CN, zhCnMap)
+	Register(ZH_CN, zhCnMap)
 }
 
 var zhCnMap = map[string]string{

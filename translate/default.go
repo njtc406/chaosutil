@@ -24,7 +24,8 @@ func init() {
 	transMap = [LANGUAGE_MAX]map[string]string{}
 }
 
-func register(languageType LanguageType, content map[string]string) {
+// Register 注册翻译内容
+func Register(languageType LanguageType, content map[string]string) {
 	if transMap[languageType] == nil {
 		transMap[languageType] = make(map[string]string, len(content))
 	}

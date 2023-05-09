@@ -10,7 +10,7 @@
 package translate
 
 func init() {
-	register(EN_US, enUsMap)
+	Register(EN_US, enUsMap)
 }
 
 var enUsMap = map[string]string{
