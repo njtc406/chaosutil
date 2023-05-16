@@ -221,6 +221,7 @@ func (d *DefaultLogger) Close() {
 	if err := d.Writer.Close(); err != nil {
 		_, _ = fmt.Fprintln(os.Stdout, err)
 	}
+	d.Writer.Close()
 	d.Writer = nil
 	d.Logger = nil
 }
