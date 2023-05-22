@@ -169,11 +169,12 @@ type DefaultLogger struct {
 // fullCaller 如果需要打印调用者信息,那么这个参数可以设置调用者信息的详细程度
 // withColors 是否需要信息的颜色(基本上只能用于linux的前台打印)
 // openStdout 是否开启标准输出(如果filePath为空,且openStdout未开启,那么将不会有任何日志信息被记录)
-func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) *DefaultLogger {
+func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) (*DefaultLogger, error) {
 	logger := &DefaultLogger{}
+	var err error
 	if len(filePath) > 0 {
 		if rotationTime < time.Second*60 || rotationTime > time.Hour*24 {
-			panic("rotationTime must >= 1min and <= 24hour")
+			return nil, DefaultRotationTimeErr
 		}
 		pattern := "_%Y%m%d.log"
 		if rotationTime < time.Minute*60 {
@@ -187,16 +188,23 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 			WithRotationTime(rotationTime),
 			WithPattern(pattern),
 		); err != nil {
-			panic(err)
+			return nil, err
 		} else {
 			logger.Writer = w
 		}
+
+		defer func() {
+			if err != nil && logger.Writer != nil {
+				// 如果出现错误,需要释放writer
+				logger.Writer.Close()
+			}
+		}()
 	} else {
 		logger.Writer = os.Stdout
 	}
 
 	if level > 6 {
-		panic("log level must <= 6")
+		return nil, DefaultLogLevelErr
 	}
 
 	logger.Logger = New(
@@ -209,10 +217,10 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 	if openStdout && len(filePath) > 0 {
 		logger.Logger.SetOutput(io.MultiWriter(os.Stdout, logger.Writer))
 	}
-	// 由于是追加模式,所以默认为无锁
+	// 由于是追加模式,所以默认为无锁(gpt认为这里在)
 	logger.Logger.SetNoLock()
 
-	return logger
+	return logger, nil
 }
 
 // Close 释放日志对象
@@ -221,7 +229,16 @@ func (d *DefaultLogger) Close() {
 	if err := d.Writer.Close(); err != nil {
 		_, _ = fmt.Fprintln(os.Stdout, err)
 	}
-	d.Writer.Close()
+	if d.Writer != nil {
+		if err := d.Writer.Close(); err != nil {
+			fmt.Fprintln(os.Stdout, err)
+		}
+	} else {
+		if err := d.Logger.Writer().Close(); err != nil {
+			fmt.Fprintln(os.Stdout, err)
+		}
+	}
+
 	d.Writer = nil
 	d.Logger = nil
 }
