@@ -225,6 +225,10 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 
 // Close 释放日志对象
 func (d *DefaultLogger) Close() {
+	if d == nil || d.Logger == nil {
+		return
+	}
+
 	d.Logger.SetOutput(os.Stdout)
 	if err := d.Writer.Close(); err != nil {
 		_, _ = fmt.Fprintln(os.Stdout, err)
