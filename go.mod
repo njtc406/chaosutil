@@ -63,6 +63,7 @@ require (
 	github.com/quic-go/quic-go v0.34.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rpcxio/libkv v0.5.1 // indirect
+	github.com/rpcxio/rpcx-etcd v0.2.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/rubyist/circuitbreaker v2.2.1+incompatible // indirect
 	github.com/smallnest/quick v0.1.0 // indirect

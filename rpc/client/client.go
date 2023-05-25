@@ -12,6 +12,8 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/rpcxio/libkv/store"
+	etcdClientV3 "github.com/rpcxio/rpcx-etcd/client"
 	"github.com/smallnest/rpcx/client"
 )
 
@@ -36,6 +38,19 @@ func NewRpcxClient(servicePath string, serviceMethod string, protocol string, ad
 	xclient := client.NewXClient(serviceMethod, client.Failover, client.RandomSelect, d, client.DefaultOption)
 
 	return &RpcxClient{client: xclient}, nil
+}
+
+func NewRpcXClientUseEtcd(basePath string, servicePath string, etcdAddr []string, allowKeyNotFound bool, options *store.Config) (client.XClient, error) {
+	// 新建etcd服务发现插件
+	d, err := etcdClientV3.NewEtcdV3Discovery(basePath, servicePath, etcdAddr, allowKeyNotFound, options)
+	if err != nil {
+		return nil, err
+	}
+
+	// 新建rpc客户端
+	cli := client.NewXClient(servicePath, client.Failtry, client.RoundRobin, d, client.DefaultOption)
+	cli.Call()
+	return cli, nil
 }
 
 func (c *RpcxClient) GetService(method string) *RpcxService {
