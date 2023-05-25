@@ -49,7 +49,7 @@ func NewRpcXClientUseEtcd(basePath string, servicePath string, etcdAddr []string
 
 	// 新建rpc客户端
 	cli := client.NewXClient(servicePath, client.Failtry, client.RoundRobin, d, client.DefaultOption)
-	cli.Call()
+
 	return cli, nil
 }
 
