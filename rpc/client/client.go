@@ -15,6 +15,8 @@ import (
 	"github.com/smallnest/rpcx/client"
 )
 
+// TODO: 每个service需要一个自己的channel用于rpc通信,所以util里面的service就需要加上rpc相关的功能,将功能完全从graceful中解耦出去
+
 type RpcxClient struct {
 	client client.XClient
 }
