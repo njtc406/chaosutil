@@ -2,7 +2,6 @@ package log
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -85,6 +84,12 @@ func WithTimeFormat(formatStr string) Option {
 	}
 }
 
+func WithHook(hook logrus.Hook) Option {
+	return func(logger *Logger) {
+		logger.AddHook(hook)
+	}
+}
+
 // New creates a new Logger object.
 func New(opts ...Option) *Logger {
 	logger := logrus.New()
@@ -154,24 +159,18 @@ type ILogger interface {
 	Exit(code int)
 }
 
-// DefaultLogger 通用的日志记录对象
-type DefaultLogger struct {
-	Logger *Logger
-	Writer io.WriteCloser
-}
-
 // NewDefaultLogger 创建一个通用日志对象
 // filePath 日志文件名(最终文件名会是 filePath_20060102150405.log)(filePath为空且开启标准输出的情况下默认输出到stdout,否则无任何输出)
 // maxAge 最大存放时间(过期会自动删除)
 // rotationTime 自动切分间隔(到期日志自动切换新文件)
-// level 日志级别(小于设置级别的信息都会被记录打印)
+// level 日志级别(小于设置级别的信息都会被记录打印,设置级别如果超出限制,默认日志等级为3)
 // withCaller 是否需要调用者信息
 // fullCaller 如果需要打印调用者信息,那么这个参数可以设置调用者信息的详细程度
 // withColors 是否需要信息的颜色(基本上只能用于linux的前台打印)
 // openStdout 是否开启标准输出(如果filePath为空,且openStdout未开启,那么将不会有任何日志信息被记录)
-func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) (*DefaultLogger, error) {
-	logger := &DefaultLogger{}
-	var err error
+// TODO 支持远程日志钩子函数,可以将日志发送到远程的日志记录器上(这个函数需要go出去执行,不能阻塞)
+func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) (*Logger, error) {
+	var writers []io.Writer
 	if len(filePath) > 0 {
 		if rotationTime < time.Second*60 || rotationTime > time.Hour*24 {
 			return nil, DefaultRotationTimeErr
@@ -182,67 +181,51 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 		} else if rotationTime < time.Hour*24 {
 			pattern = "_%Y%m%d%H.log"
 		}
-		if w, err := rotateNew(
+
+		w, err := rotateNew(
 			filePath,
 			WithMaxAge(maxAge),
 			WithRotationTime(rotationTime),
 			WithPattern(pattern),
-		); err != nil {
+		)
+		if err != nil {
+			w.Close()
 			return nil, err
 		} else {
-			logger.Writer = w
+			writers = append(writers, w)
 		}
+	}
 
-		defer func() {
-			if err != nil && logger.Writer != nil {
-				// 如果出现错误,需要释放writer
-				logger.Writer.Close()
-			}
-		}()
+	if openStdout {
+		writers = append(writers, os.Stdout)
 	} else {
-		logger.Writer = os.Stdout
+		writers = append(writers, io.Discard)
 	}
 
-	if level > 6 {
-		return nil, DefaultLogLevelErr
+	if logrus.Level(level) > TraceLevel {
+		level = uint32(WarnLevel)
 	}
 
-	logger.Logger = New(
+	logger := New(
 		WithLevel(logrus.Level(level)),
 		WithCaller(withCaller),
 		WithColor(withColors),
-		WithOut(logger.Writer),
+		WithOut(io.MultiWriter(writers...)),
 		WithFullCaller(fullCaller),
 	)
-	if openStdout && len(filePath) > 0 {
-		logger.Logger.SetOutput(io.MultiWriter(os.Stdout, logger.Writer))
-	}
-	// 由于是追加模式,所以默认为无锁(gpt认为这里在)
-	logger.Logger.SetNoLock()
+
+	// 由于是追加模式,所以默认为无锁(gpt认为这里在多线程环境中可能会产生一些问题)
+	logger.SetNoLock()
 
 	return logger, nil
 }
 
-// Close 释放日志对象
-func (d *DefaultLogger) Close() {
-	if d == nil || d.Logger == nil {
-		return
+func Release(logger *Logger) error {
+	if logger == nil || logger.Writer() == nil {
+		return nil
 	}
 
-	d.Logger.SetOutput(os.Stdout)
-	if err := d.Writer.Close(); err != nil {
-		_, _ = fmt.Fprintln(os.Stdout, err)
-	}
-	if d.Writer != nil {
-		if err := d.Writer.Close(); err != nil {
-			fmt.Fprintln(os.Stdout, err)
-		}
-	} else {
-		if err := d.Logger.Writer().Close(); err != nil {
-			fmt.Fprintln(os.Stdout, err)
-		}
-	}
+	logger.SetOutput(os.Stdout)
 
-	d.Writer = nil
-	d.Logger = nil
+	return logger.Writer().Close()
 }
