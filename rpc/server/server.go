@@ -10,9 +10,11 @@
 package server
 
 import (
+	"fmt"
 	"github.com/njtc406/chaosutil/rpc"
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
 	"github.com/smallnest/rpcx/server"
+	"path"
 )
 
 // serviceList 服务列表
@@ -30,27 +32,24 @@ func RegisterService(svcName string, svc interface{}, force bool) error {
 	return nil
 }
 
-func NewETCDRpcxServer(etcdConf *rpc.EtcdConf) {
+func NewETCDRpcxServer(addr string, etcdConf *rpc.EtcdConf) (*server.Server, error) {
 	s := server.NewServer()
+	r := &serverplugin.EtcdV3RegisterPlugin{
+		ServiceAddress: addr,
+		EtcdServers:    etcdConf.Addr,
+		BasePath:       path.Join(etcdConf.BasePath, etcdConf.ServicePath),
+		//Metrics:        metrics.NewRegistry(),
+		//UpdateInterval: time.Minute,
+	}
+	if err := r.Start(); err != nil {
+		return nil, err
+	}
+	s.Plugins.Add(r)
 
 	for svcName, svc := range serviceList {
+		fmt.Println(svcName)
 		s.RegisterName(svcName, svc, "")
 	}
 
-	r := &serverplugin.EtcdV3RegisterPlugin{
-		//ServiceAddress: "tcp@127.0.0.1:8080",
-		//EtcdServers:    []string{"localhost:2379"},
-		//BasePath:       etcdConf.BasePath,
-		//Services:       []string{},
-		//UpdateInterval: time.Second * 10,
-		ServiceAddress: "",
-		EtcdServers:    nil,
-		BasePath:       "",
-		Metrics:        nil,
-		Services:       nil,
-		UpdateInterval: 0,
-		Expired:        0,
-		Options:        nil,
-	}
-	s.Plugins.Add(r)
+	return s, nil
 }
