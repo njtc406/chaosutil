@@ -5,7 +5,7 @@
 package rpc
 
 type EtcdConf struct {
-	BasePath    string
-	ServiceAddr string // ip:prot
-	Addr        []string
+	BasePath    string   // 服务的根路径
+	ServiceAddr string   // ip:prot
+	Addr        []string // etcd的集群地址(每个实例的ip:port)
 }

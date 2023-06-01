@@ -3,8 +3,8 @@
  */
 
 // Package server
-// 模块名: 模块名
-// 功能描述: 描述
+// 模块名: rpc服务器
+// 功能描述: 这是一个以etcd作为注册中心的rpc服务器模块
 // 作者:  yr  2023/5/25 0025 20:00
 // 最后更新:  yr  2023/5/25 0025 20:00
 package server
@@ -16,10 +16,12 @@ import (
 	"github.com/smallnest/rpcx/server"
 )
 
+// TODO 之后需要整理一下，把一些东西提出来作为配置
+
 // RPCServer rpc服务器
 type RPCServer struct {
 	svr         *server.Server         // rpc服务器对象
-	Addr        string                 // rpc服务器监听地址
+	addr        string                 // rpc服务器监听地址
 	etcdConf    *rpc.EtcdConf          // etcd配置
 	serviceList map[string]interface{} // 注册的服务
 	initialized bool                   // 初始化状态
@@ -29,11 +31,15 @@ type RPCServer struct {
 }
 
 // NewRPCService 新建一个rpc服务器对象
-func NewRPCService(logger log.ILogger) *RPCServer {
+// @params addr ip:port
+func NewRPCService(addr string, logger log.ILogger, etcdConf *rpc.EtcdConf) *RPCServer {
 	return &RPCServer{
 		svr:         server.NewServer(),
 		serviceList: make(map[string]interface{}),
 		logger:      logger,
+		closeCh:     make(chan struct{}),
+		etcdConf:    etcdConf,
+		addr:        addr,
 	}
 }
 
@@ -77,6 +83,8 @@ func (r *RPCServer) Init() error {
 		ServiceAddress: "tcp@" + r.etcdConf.ServiceAddr,
 		EtcdServers:    r.etcdConf.Addr,
 		BasePath:       r.etcdConf.BasePath,
+		//Metrics:        metrics.NewRegistry(),
+		//UpdateInterval: time.Minute,
 	}
 	if err := p.Start(); err != nil {
 		return err
@@ -84,7 +92,7 @@ func (r *RPCServer) Init() error {
 	r.svr.Plugins.Add(r)
 
 	// 注册服务
-	for svcName, svc := range serviceList {
+	for svcName, svc := range r.serviceList {
 		if err := r.svr.RegisterName(svcName, svc, ""); err != nil {
 			return err
 		}
@@ -96,75 +104,46 @@ func (r *RPCServer) Init() error {
 }
 
 // Start rpc服务器启动(保持单线程中调用)
-func (r *RPCServer) Start() {
+func (r *RPCServer) Start() error {
 	if r == nil || r.svr == nil {
-		r.logger.Panic(rpc.ErrRPCServerNotInit)
+		return rpc.ErrRPCServerNotInit
 	}
 
 	if r.running {
-		r.logger.Warnf("the rpc server is running")
-		return
+		return rpc.ErrRPCServerIsRunning
 	}
 
 	r.running = true
 
 	go r.start()
+
+	return nil
 }
 
 func (r *RPCServer) start() {
-	go r.svr.Serve("tcp", r.Addr)
+
+	go r.svr.Serve("tcp", r.addr)
 
 	for r.running {
 		select {
-		case _, ok := <-r.closeCh:
-			if !ok {
-				r.running = false
-				r.svr.Close()
-			}
+		case <-r.closeCh:
+			r.running = false
+			r.svr.Close()
 		}
 	}
 }
 
 // Stop rpc服务器关闭
 func (r *RPCServer) Stop() error {
+	if r == nil || r.svr == nil {
+		return rpc.ErrRPCServerNotInit
+	}
+
+	r.closeCh <- struct{}{}
 
 	return nil
 }
 
-// serviceList 服务列表
-var serviceList = make(map[string]interface{})
-
-// RegisterService 注册服务
-func RegisterService(svcName string, svc interface{}, force bool) error {
-	_, ok := serviceList[svcName]
-	if ok && !force {
-		return rpc.ErrServiceHasRegistered
-	}
-
-	serviceList[svcName] = svc
-
-	return nil
-}
-
-func NewETCDRpcxServer(addr string, etcdConf *rpc.EtcdConf) (*server.Server, error) {
-	s := server.NewServer()
-	r := &serverplugin.EtcdV3RegisterPlugin{
-		ServiceAddress: addr,
-		EtcdServers:    etcdConf.Addr,
-		BasePath:       etcdConf.BasePath,
-	}
-	if err := r.Start(); err != nil {
-		return nil, err
-	}
-	s.Plugins.Add(r)
-
-	for svcName, svc := range serviceList {
-		s.RegisterName(svcName, svc, "")
-	}
-
-	return s, nil
-}
-
-func CheckServiceHealth() {
+func (r *RPCServer) Release() {
 
 }
