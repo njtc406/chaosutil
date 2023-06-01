@@ -6,6 +6,6 @@ package rpc
 
 type EtcdConf struct {
 	BasePath    string
-	ServicePath string
+	ServiceAddr string // ip:prot
 	Addr        []string
 }
