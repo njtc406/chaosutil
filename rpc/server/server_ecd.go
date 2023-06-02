@@ -89,7 +89,7 @@ func (r *RPCServer) Init() error {
 	if err := p.Start(); err != nil {
 		return err
 	}
-	r.svr.Plugins.Add(r)
+	r.svr.Plugins.Add(p)
 
 	// 注册服务
 	for svcName, svc := range r.serviceList {
@@ -145,5 +145,5 @@ func (r *RPCServer) Stop() error {
 }
 
 func (r *RPCServer) Release() {
-
+	// TODO 释放资源
 }
