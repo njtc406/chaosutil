@@ -12,11 +12,14 @@ package server
 import (
 	"github.com/njtc406/chaosutil/log"
 	"github.com/njtc406/chaosutil/rpc"
+	"github.com/rcrowley/go-metrics"
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
 	"github.com/smallnest/rpcx/server"
+	"time"
 )
 
 // TODO 之后需要整理一下，把一些东西提出来作为配置
+// TODO 目前只是最简单的使用版本,后面逐渐修改
 
 // RPCServer rpc服务器
 type RPCServer struct {
@@ -83,8 +86,8 @@ func (r *RPCServer) Init() error {
 		ServiceAddress: "tcp@" + r.etcdConf.ServiceAddr,
 		EtcdServers:    r.etcdConf.Addr,
 		BasePath:       r.etcdConf.BasePath,
-		//Metrics:        metrics.NewRegistry(),
-		//UpdateInterval: time.Minute,
+		Metrics:        metrics.NewRegistry(),
+		UpdateInterval: time.Minute,
 	}
 	if err := p.Start(); err != nil {
 		return err

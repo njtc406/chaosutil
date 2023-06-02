@@ -13,8 +13,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/njtc406/chaosutil/rpc"
-	"github.com/njtc406/chaosutil/rpc/client"
+	myClient "github.com/njtc406/chaosutil/rpc/client"
 	"github.com/njtc406/chaosutil/rpc/example/handler"
+	"github.com/smallnest/rpcx/client"
+	"sync"
+	"time"
 )
 
 func startClient() {
@@ -22,7 +25,7 @@ func startClient() {
 		BasePath: "/test",
 		Addr:     []string{"192.168.0.103:2379"},
 	}
-	rpcClient, err := client.NewRpcXClientUseEtcd("aaa", conf, nil)
+	rpcClient, err := myClient.NewRpcXClientUseEtcd("aaa", conf, nil)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -30,28 +33,53 @@ func startClient() {
 
 	defer rpcClient.Close()
 
-	//wg := new(sync.WaitGroup)
+	//args := []*handler.Args{
+	//	{Name: "张三"},
+	//	{Name: "李四"},
+	//	{Name: "王五"},
+	//	{Name: "孙六"},
+	//}
+	//
+	//replies := []*handler.Reply{
+	//	{},
+	//	{},
+	//	{},
+	//	{},
+	//}
+	wg := new(sync.WaitGroup)
+	//for i := 0; i < len(args); i++ {
+	//	wg.Add(1)
+	//	go startCall(rpcClient, args[i], replies[i], wg)
+	//}
 
-	args := []*handler.Args{
-		{Name: "张三"},
-		{Name: "李四"},
-		{Name: "王五"},
-		{Name: "孙六"},
+	startTime := time.Now()
+	for i := 0; i < 10000; i++ {
+		wg.Add(1)
+		go startCall(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
+		//go startGo(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
 	}
 
-	replies := []*handler.Reply{
-		{},
-		{},
-		{},
-		{},
-	}
+	wg.Wait()
+	fmt.Println("cost time:%d", time.Now().Sub(startTime))
+}
 
-	for i := 0; i < len(args); i++ {
-		if err = rpcClient.Call(context.Background(), "SayHi", args[i], replies[i]); err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(replies[i].Say)
-		}
+func startCall(cli client.XClient, args interface{}, reply *handler.Reply, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if err := cli.Call(context.Background(), "SayHi", args, reply); err != nil {
+		fmt.Println(err)
+	} else {
+		//fmt.Println(reply.Say)
 	}
+}
 
+func startGo(cli client.XClient, args interface{}, reply *handler.Reply, wg *sync.WaitGroup) {
+	defer wg.Done()
+	done := make(chan *client.Call, 1)
+	call, err := cli.Go(context.Background(), "SayHi", args, reply, done)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		<-call.Done
+		//fmt.Println(reply.Say)
+	}
 }
