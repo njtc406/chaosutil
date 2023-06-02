@@ -9,37 +9,40 @@
 // 最后更新:  yr  2023/4/17 0017 23:22navicat
 package engine
 
+import (
+	"context"
+)
+
 type Reply interface {
 }
 
 // IService service的基础功能定义
 type IService interface {
 	IEngine
-	Call(interface{}, Reply) error // 这个只是个示例,具体参数和返回再定
-	Send(interface{})              // 这个只是个示例,具体参数和返回再定
+	Call(ctx context.Context, method string, args interface{}, reply interface{}) error // 这个只是个示例,具体参数和返回再定
+	Send(ctx context.Context, method string, args interface{}, reply interface{}) error // 这个只是个示例,具体参数和返回再定
 }
 
 type Service struct {
 	msgQue chan interface{} // 通信管道
-
 }
 
-func (s *Service) Init() {
-
+func (s *Service) Init() error {
+	return nil
 }
 
-func (s *Service) Start() {
-
+func (s *Service) Start() error {
+	return nil
 }
 
-func (s *Service) Stop() {
-
+func (s *Service) Stop() error {
+	return nil
 }
 
-func (s *Service) Send() {
-
+func (s *Service) Send() error {
+	return nil
 }
 
-func (s *Service) Call() {
-
+func (s *Service) Call() error {
+	return nil
 }

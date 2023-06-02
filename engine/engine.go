@@ -11,7 +11,7 @@ package engine
 
 // IEngine 这个engine其实应该是service,等下再改
 type IEngine interface {
-	Init()
-	Start()
-	Stop()
+	Init() error
+	Start() error
+	Stop() error
 }

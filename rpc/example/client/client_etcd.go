@@ -54,17 +54,18 @@ func startClient() {
 
 	startTime := time.Now()
 	for i := 0; i < 10000; i++ {
-		wg.Add(1)
-		go startCall(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
+		//wg.Add(1)
+		//go startCall(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
 		//go startGo(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
+		startCall(rpcClient, &handler.Args{Name: "张三"}, &handler.Reply{}, wg)
 	}
 
-	wg.Wait()
+	//wg.Wait()
 	fmt.Println("cost time:%d", time.Now().Sub(startTime))
 }
 
 func startCall(cli client.XClient, args interface{}, reply *handler.Reply, wg *sync.WaitGroup) {
-	defer wg.Done()
+	//defer wg.Done()
 	if err := cli.Call(context.Background(), "SayHi", args, reply); err != nil {
 		fmt.Println(err)
 	} else {
