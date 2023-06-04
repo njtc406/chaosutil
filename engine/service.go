@@ -13,9 +13,6 @@ import (
 	"context"
 )
 
-type Reply interface {
-}
-
 // IService service的基础功能定义
 type IService interface {
 	IEngine
