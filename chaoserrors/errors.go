@@ -10,7 +10,6 @@
 package chaoserrors
 
 import (
-	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -18,28 +17,10 @@ import (
 )
 
 // 错误码缓存池,减少GC消耗
-var codePool *sync.Pool
-
-// 错误码对应的翻译文字(这个后面看看有没有必要,是直接给错误信息好还是给错误码好,给错误码的话主要上层可以根据不同的错误码来处理,错误信息的话只是看起来不那么舒服)
-// 还有一个,这个东西应该可以使用sync.Map,少写多读场景
-var errStrMap map[int]string
-var mapMu *sync.RWMutex
-
-func init() {
-	codePool = &sync.Pool{
-		New: func() interface{} {
-			return &ErrCode{}
-		},
-	}
-
-	errStrMap = make(map[int]string)
-}
-
-// RegisterCodeString 注册错误码对应的错误字符串
-func RegisterCodeString(code int, codeStr string) {
-	mapMu.Lock()
-	defer mapMu.Unlock()
-	errStrMap[code] = codeStr
+var codePool = &sync.Pool{
+	New: func() interface{} {
+		return &ErrCode{}
+	},
 }
 
 type caller struct {
@@ -47,76 +28,91 @@ type caller struct {
 	line int
 }
 
-func (c caller) String() string {
+func (c caller) string() string {
 	return fmt.Sprintf("%s:%d", c.file, c.line)
 }
 
-func (c caller) Reset() {
+func (c caller) reset() {
 	c.line = 0
 	c.file = ""
 }
 
-// TODO 这个东西我这么考虑的,这里设置一个code，然后获取一个行号等信息，
-// 上层在转换这个code的时候就连行号一起返回，这样即使只在最上层处理错误，也能知道这个错误是出自哪里的返回
-
 // ErrCode 错误码对象
 type ErrCode struct {
-	Code int
-	caller
-	parentCode *ErrCode
-	// desc gpt建议我在这里加一个错误的描述信息(可能不是错误翻译后的信息,只是用来调试的时候可以知道这个错误码的一些描述,能更快定位错误本身),可以考虑
+	Code    int      // 错误码(这个主要用来给一些地方做判断使用,避免直接判断字符串)
+	Msg     string   // 错误信息
+	caller           // 调用者信息
+	preCode *ErrCode // 前一个错误
 }
 
-func (e *ErrCode) Reset() {
+func (e *ErrCode) reset() {
 	e.Code = 0
-	e.parentCode = nil
-	e.caller.Reset()
+	e.Msg = ""
+	e.preCode = nil
+	e.caller.reset()
 }
 
 func (e *ErrCode) String() string {
-	return TransformErrCode(e.Code)
+	return fmt.Sprintf("%s %s", e.caller.string(), e.Msg)
 }
 
-func (e *ErrCode) StringWithCaller() string {
-	return fmt.Sprintf("%s %s", e.caller.String(), TransformErrCode(e.Code))
+// Error 返回错误信息(目前暂时修改为手动释放,后面根据需求看需不需要使用之后自动释放)
+func (e *ErrCode) Error() string {
+	errList := e.getAllErr()
+
+	errStr := make([]string, 0, len(errList))
+	for i := len(errList) - 1; i >= 0; i-- {
+		errStr = append(errStr, errList[i].String())
+		//errList[i].Release()
+	}
+
+	return strings.Join(errStr, "\n")
 }
 
-// ConvertCodeToError 转换为标准错误(转换完成后会释放错误对象)
-func ConvertCodeToError(errCode *ErrCode, withCaller bool) error {
-	errList := []*ErrCode{errCode}
-	parentCode := errCode.parentCode
-	errCode.parentCode = nil
+// Release 释放ErrCode对象
+func (e *ErrCode) Release() {
+	e.reset()
+	codePool.Put(e)
+}
+
+// ReleaseAll 循环释放所有对象
+func (e *ErrCode) ReleaseAll() {
+	parentCode := e.preCode
+	e.preCode = nil
+	e.Release()
+	var tmpParentCode *ErrCode
+	for parentCode != nil {
+		tmpParentCode = parentCode
+		parentCode = parentCode.preCode
+		tmpParentCode.preCode = nil
+		tmpParentCode.Release()
+	}
+}
+
+func (e *ErrCode) getAllErr() []*ErrCode {
+	errList := []*ErrCode{e}
+	parentCode := e.preCode
+	e.preCode = nil
 	var tmpParentCode *ErrCode
 	for parentCode != nil {
 		errList = append(errList, parentCode)
 		tmpParentCode = parentCode
-		parentCode = parentCode.parentCode
-		tmpParentCode.parentCode = nil
+		parentCode = parentCode.preCode
+		tmpParentCode.preCode = nil
 	}
 
-	var errStr []string
-	if withCaller {
-		for i := len(errList) - 1; i >= 0; i-- {
-			errStr = append(errStr, errList[i].StringWithCaller())
-			Release(errList[i])
-		}
-	} else {
-		for i := len(errList) - 1; i >= 0; i-- {
-			errStr = append(errStr, errList[i].String())
-			Release(errList[i])
-		}
-	}
-
-	return errors.New(strings.Join(errStr, "\n"))
+	return errList
 }
 
 // NewErrCode 新建错误码(禁止同一个错误码作为多个的父错误!!意思就是是错误只能被单线的传递,最终被一个地方捕获后输出)
 // 例如: 错误A返回后,被B捕获,B又添加了一个新的错误,A作为父错误,那么此时A就不能再被其他错误捕获了,只能由B继续上传,直至最终被捕获输出
-// 由于转换时会自动释放掉,所以被多个不同错误捕获会发生一个错误被转换释放后,所有的父错误已经被释放了
-func NewErrCode(code int, parentCode *ErrCode) *ErrCode {
+// 如果要多线传递,请自己理清逻辑,保证最后所有的对象都能正确的使用和释放
+func NewErrCode(code int, msg string, parentCode *ErrCode) *ErrCode {
 	errCode := codePool.Get().(*ErrCode)
 	errCode.Code = code
-	errCode.parentCode = parentCode
+	errCode.Msg = msg
+	errCode.preCode = parentCode
+
 	_, file, line, ok := runtime.Caller(1)
 	if ok {
 		errCode.line = line
@@ -126,26 +122,3 @@ func NewErrCode(code int, parentCode *ErrCode) *ErrCode {
 	}
 	return errCode
 }
-
-// Release 释放ErrCode对象
-func Release(errCode *ErrCode) {
-	// TODO 考虑在释放对象前先检查该对象是否已经被释放，避免出现重复释放的情况。
-	// 这个需要怎么判断?
-	errCode.Reset()
-	codePool.Put(errCode)
-}
-
-// TransformErrCode 翻译错误码
-func TransformErrCode(code int) string {
-	mapMu.RLock()
-	defer mapMu.RUnlock()
-	str, ok := errStrMap[code]
-	if ok {
-		return str
-	} else {
-		return fmt.Sprintf("unhandled error code:%d", code)
-	}
-}
-
-// TODO 1. https://github.com/go-kratos/kratos这个里面有个相同的实现，需要找时间看看别人怎么实现的,参考一下有啥改进
-// TODO 2. 需要把之前的模块都替换成新的错误处理

@@ -15,19 +15,10 @@ import (
 )
 
 func TestNewErrCode(t *testing.T) {
-	err := NewErrCode(1, nil)
-	fmt.Println(err.String())
-	fmt.Println(err.StringWithCaller())
-}
-
-func TestConvertCodeToError(t *testing.T) {
-	err1 := NewErrCode(1, nil)
-	err2 := NewErrCode(2, err1)
-
-	fmt.Println(ConvertCodeToError(err2, false))
-
-	err3 := NewErrCode(3, nil)
-	err4 := NewErrCode(4, err3)
-
-	fmt.Println(ConvertCodeToError(err4, true))
+	err := NewErrCode(1, "验证操作", nil)
+	fmt.Println(err)
+	err1 := NewErrCode(2, "递归信息", err)
+	fmt.Println(err1)
+	err.Release()
+	err1.Release()
 }
