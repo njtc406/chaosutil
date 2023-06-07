@@ -52,6 +52,7 @@ func (e *ErrCode) reset() {
 	e.caller.reset()
 }
 
+// String 当前错误对象的错误信息
 func (e *ErrCode) String() string {
 	return fmt.Sprintf("%s %s", e.caller.string(), e.Msg)
 }

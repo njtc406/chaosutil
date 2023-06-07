@@ -22,3 +22,11 @@ func TestNewErrCode(t *testing.T) {
 	err.Release()
 	err1.Release()
 }
+
+func BenchmarkName(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		err := NewErrCode(1, "验证操作", nil)
+		_ = err.Error()
+		err.Release()
+	}
+}
