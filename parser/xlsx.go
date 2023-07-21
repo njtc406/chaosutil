@@ -180,12 +180,18 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 				switch store.Kind() {
 				case reflect.String:
 					store.SetString(content)
-				case reflect.Int64, reflect.Int:
+				case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int8, reflect.Int16:
 					v, err := cellData.Int64()
 					if err != nil {
 						return err
 					}
 					store.SetInt(v)
+				//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64: // 这里有点问题
+				//	v, err := cellData.Int64()
+				//	if err != nil {
+				//		return err
+				//	}
+				//	store.SetUint(uint64(v))
 				case reflect.Float64:
 					v, err := cellData.Float()
 					if err != nil {
@@ -195,6 +201,13 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 					store.SetFloat(v)
 				case reflect.Bool:
 					store.SetBool(cellData.Bool())
+				case reflect.Slice:
+					// 数组 比如int;int;int
+				case reflect.Map:
+					// kv形式 比如map|int;int
+					return errors.New("暂未实现")
+				case reflect.Struct: // 这个可能对配置来讲太复杂了,因为里面又涉及复杂的嵌套,可能只能支持简单形式的结构,不能在里面再次嵌套struct
+					// 结构体 比如StructName|{string:int;string:string}
 				default:
 					return errors.New(fmt.Sprintf("row[%d] cell[%s] unknown type value", r+1, *info.colDesc))
 				}
