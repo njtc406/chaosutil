@@ -15,18 +15,15 @@ import (
 )
 
 func TestNewErrCode(t *testing.T) {
-	err := NewErrCode(1, "验证操作", nil)
+	err := NewErrCode(1, "原始错误", nil)
 	fmt.Println(err)
-	err1 := NewErrCode(2, "递归信息", err)
+	err1 := NewErrCode(2, "错误收集者提示错误", err)
 	fmt.Println(err1)
-	err.Release()
-	err1.Release()
 }
 
 func BenchmarkName(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := NewErrCode(1, "验证操作", nil)
 		_ = err.Error()
-		err.Release()
 	}
 }
