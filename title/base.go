@@ -38,11 +38,13 @@ Supported by:
 `
 
 var title2 = `
+%s:
                 ▄▄·  ▄ .▄ ▄▄▄·       .▄▄ · 
                 ▐█ ▌▪██▪▐█▐█ ▀█ ▪     ▐█ ▀. 
                 ██ ▄▄██▀▐█▄█▀▀█  ▄█▀▄ ▄▀▀▀█▄
                 ▐███▌██▌▐▀▐█ ▪▐▌▐█▌.▐▌▐█▄▪▐█
                 ·▀▀▀ ▀▀▀ · ▀  ▀  ▀█▄▀▪ ▀▀▀▀ 
+						%s: %s
 `
 
 var title3 = `
@@ -51,4 +53,13 @@ Entropy increase // 熵增
 
 func EchoTitle() {
 	fmt.Print(fmt.Sprintf(title1, translate.Translate("Supported by"), translate.Translate("Version"), version))
+}
+
+func EchoTitleByType(tp int) {
+	switch tp {
+	case 0:
+		fmt.Print(fmt.Sprintf(title1, translate.Translate("Supported by"), translate.Translate("Version"), version))
+	case 1:
+		fmt.Print(fmt.Sprintf(title2, translate.Translate("Supported by"), translate.Translate("Version"), version))
+	}
 }
