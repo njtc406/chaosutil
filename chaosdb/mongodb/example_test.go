@@ -2,7 +2,7 @@ package mongodb_test
 
 import (
 	"fmt"
-	"github.com/njtc406/chaosutil/db/mongodb"
+	"github.com/njtc406/chaosutil/chaosdb/mongodb"
 	"gopkg.in/mgo.v2"
 )
 

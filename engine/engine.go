@@ -9,8 +9,9 @@
 // 最后更新:  yr  2023/4/17 0017 23:21
 package engine
 
+// IEngine 这个engine其实应该是service,等下再改
 type IEngine interface {
-	Init()
-	Start()
-	Stop()
+	Init() error
+	Start() error
+	Stop() error
 }
