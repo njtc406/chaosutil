@@ -11,13 +11,15 @@ package chaoserrors
 
 import (
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 )
 
-type cError interface {
+type CError interface {
 	error
 	EqualErrCode(int) bool
+	GetCode() int
 }
 
 // ErrCode 错误码对象
@@ -58,8 +60,13 @@ func (e *ErrCode) EqualErrCode(code int) bool {
 	return e.Code == code
 }
 
+// GetCode 获取错误码
+func (e *ErrCode) GetCode() int {
+	return e.Code
+}
+
 // NewErrCode 新建错误码
-func NewErrCode(code int, msg string, preMsg error) cError {
+func NewErrCode(code int, msg string, preMsg error) CError {
 	errCode := &ErrCode{
 		Code:   code,
 		Msg:    msg,
@@ -79,7 +86,7 @@ func NewErrCode(code int, msg string, preMsg error) cError {
 		}
 		errCode.caller = callerInfo
 	} else {
-		fmt.Printf("code:%d can not get caller info\n", code)
+		log.Printf("code:%d can not get caller info\n", code)
 	}
 	return errCode
 }
