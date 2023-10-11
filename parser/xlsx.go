@@ -15,6 +15,14 @@ import (
 	"strings"
 )
 
+type myCell struct {
+	colDesc    *string
+	colName    *string
+	isRequired bool
+}
+
+const canParsePrefix = `c_`
+
 type xlsxParser struct {
 	CanParsePrefix string                   // 可以被解析的标签页前缀 默认为"c_"
 	FilePath       string                   // 文件路径
@@ -52,42 +60,6 @@ func (x *xlsxParser) ParseXlsxFile() error {
 	return nil
 }
 
-type myCell struct {
-	colDesc    *string
-	colName    *string
-	isRequired bool
-}
-
-const canParsePrefix = `c_`
-
-// ParseXlsxFile 解析xlsx文件
-// xlsx文件中的所有标签页,默认带有"c_"前缀的的标签页才会被解析
-// xlsx的文件格式为(第一行为列名的字段中文说明,第二行为struct中的导出字段,第三行为字段选填属性,第四行为字段的类型)
-// filePath为文件路径(以执行程序所在位置的相对路径或者根目录为基准的全路径)
-// structObj为将要解析的结构对象(值或者指针均可)
-// 返回值为传入的*structObj类型的一个切片
-func ParseXlsxFile(filePath string, structObjMap map[string]interface{}) (map[string][]interface{}, error) {
-	ret := make(map[string][]interface{})
-	xlFile, err := xlsx.OpenFile(filePath)
-	if err != nil {
-		return ret, err
-	}
-
-	for _, sheet := range xlFile.Sheets {
-		if strings.HasPrefix(sheet.Name, canParsePrefix) {
-			structName := strings.TrimPrefix(sheet.Name, canParsePrefix)
-			var list []interface{}
-			err = parseSheet(sheet, structObjMap[structName], &list)
-			if err != nil {
-				return ret, err
-			}
-			ret[structName] = list
-		}
-	}
-
-	return ret, err
-}
-
 // parseSheet 解析标签页
 func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) error {
 	var realType = reflect.TypeOf(structObj)
@@ -100,19 +72,20 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 	// 解析列名称
 	row0 := sheet.Row(0) // 字段中文说明
 	row2 := sheet.Row(2) // 是否必填
-	for c := 0; c < len(row2.Cells); c++ {
-		cell, ok := descMap[c]
+
+	for k, c := range row2.Cells {
+		cell, ok := descMap[k]
 		if !ok {
 			cell = &myCell{}
-			descMap[c] = cell
+			descMap[k] = cell
 		}
 		// 填充必填属性
-		required := row2.Cells[c].String()
+		required := c.String()
 		if required == "required" {
 			cell.isRequired = true
 		}
 		// 填充中文说明
-		desc := row0.Cells[c].String()
+		desc := row0.Cells[k].String()
 		cell.colDesc = &desc
 	}
 
@@ -186,12 +159,18 @@ func parseSheet(sheet *xlsx.Sheet, structObj interface{}, ret *[]interface{}) er
 						return err
 					}
 					store.SetInt(v)
-				//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64: // 这里有点问题
-				//	v, err := cellData.Int64()
-				//	if err != nil {
-				//		return err
-				//	}
-				//	store.SetUint(uint64(v))
+				case reflect.Uint64, reflect.Uint, reflect.Uint32, reflect.Uint8, reflect.Uint16:
+					v, err := cellData.Int64()
+					if err != nil {
+						return err
+					}
+					store.SetUint(uint64(v))
+				case reflect.Float32:
+					v, err := cellData.Float()
+					if err != nil {
+						return err
+					}
+					store.SetFloat(v)
 				case reflect.Float64:
 					v, err := cellData.Float()
 					if err != nil {
