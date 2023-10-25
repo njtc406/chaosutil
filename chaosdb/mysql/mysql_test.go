@@ -73,7 +73,7 @@ func TestNewClient(t *testing.T) {
 		WriteTimeout:         time.Second,
 		AllowNativePasswords: true,
 	}
-	db, err := NewClient(conf)
+	db, err := NewMysqlClient(conf)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -11,56 +11,28 @@ package mysql
 
 import (
 	"fmt"
-	"github.com/go-sql-driver/mysql"
-	gsql "gorm.io/driver/mysql"
+	gsql "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"runtime"
+	"time"
 )
 
-//type ActionType uint8
-//
-//const (
-//	Update ActionType = iota
-//	Search
-//)
-//
-//type Client struct {
-//	db   *sql.DB
-//	conn *sql.Conn
-//}
-//
-//func NewMysqlClient(conf *mysql.Config) (*Client, error) {
-//	db, err := sql.Open("mysql", conf.FormatDSN())
-//	if err != nil {
-//		panic(err)
-//	}
-//	// See "Important settings" section.
-//	db.SetConnMaxLifetime(time.Minute * 3)
-//	db.SetMaxOpenConns(10)
-//	db.SetMaxIdleConns(10)
-//
-//	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-//	defer cancel()
-//	conn, err := db.Conn(ctx)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &Client{
-//		db:   db,
-//		conn: conn,
-//	}, nil
-//}
-//
-//func (c *Client) DoSql(actionType ActionType, sql string, args ...interface{}) error {
-//	return nil
-//}
-
-func NewClient(conf *mysql.Config) (*gorm.DB, error) {
-	db, err := gorm.Open(gsql.Open(conf.FormatDSN()), &gorm.Config{})
+func NewMysqlClient(conf *gsql.Config) (*gorm.DB, error) {
+	db, err := gorm.Open(mysql.Open(conf.FormatDSN()), &gorm.Config{})
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+
+	sql, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sql.SetMaxOpenConns(runtime.NumCPU() * 10)
+	sql.SetMaxIdleConns(runtime.NumCPU() * 2)
+	sql.SetConnMaxIdleTime(time.Minute * 5)
 
 	return db, nil
 }
