@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -40,6 +41,26 @@ const (
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel Level = logrus.TraceLevel
 )
+
+const (
+	PanicLevelStr = "panic"
+	FatalLevelStr = "fatal"
+	ErrorLevelStr = "error"
+	WarnLevelStr  = "warn"
+	InfoLevelStr  = "info"
+	DebugLevelStr = "debug"
+	TraceLevelStr = "trace"
+)
+
+var levelMap = map[string]logrus.Level{
+	PanicLevelStr: PanicLevel,
+	FatalLevelStr: FatalLevel,
+	ErrorLevelStr: ErrorLevel,
+	WarnLevelStr:  WarnLevel,
+	InfoLevelStr:  InfoLevel,
+	DebugLevelStr: DebugLevel,
+	TraceLevelStr: TraceLevel,
+}
 
 type Option func(*Logger)
 
@@ -164,13 +185,13 @@ type ILogger interface {
 // filePath 日志文件名(最终文件名会是 filePath_20060102150405.log)(filePath为空且开启标准输出的情况下默认输出到stdout,否则无任何输出)
 // maxAge 最大存放时间(过期会自动删除)
 // rotationTime 自动切分间隔(到期日志自动切换新文件)
-// level 日志级别(小于设置级别的信息都会被记录打印,设置级别如果超出限制,默认日志等级为3)
+// level 日志级别(小于设置级别的信息都会被记录打印,设置级别如果超出限制,默认日志等级为error,取值为panic fatal error warn info debug trace)
 // withCaller 是否需要调用者信息
 // fullCaller 如果需要打印调用者信息,那么这个参数可以设置调用者信息的详细程度
 // withColors 是否需要信息的颜色(基本上只能用于linux的前台打印)
 // openStdout 是否开启标准输出(如果filePath为空,且openStdout未开启,那么将不会有任何日志信息被记录)
 // TODO 支持远程日志钩子函数,可以将日志发送到远程的日志记录器上(这个函数需要go出去执行,不能阻塞)
-func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level uint32, withCaller, fullCaller, withColors, openStdout bool) (*Logger, error) {
+func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level string, withCaller, fullCaller, withColors, openStdout bool) (*Logger, error) {
 	var writers []io.Writer
 	if len(filePath) > 0 {
 		if rotationTime < time.Second*60 || rotationTime > time.Hour*24 {
@@ -203,12 +224,13 @@ func NewDefaultLogger(filePath string, maxAge, rotationTime time.Duration, level
 		writers = append(writers, io.Discard)
 	}
 
-	if logrus.Level(level) > TraceLevel {
-		level = uint32(WarnLevel)
+	level = strings.ToLower(level)
+	if _, ok := levelMap[level]; !ok {
+		level = "error"
 	}
 
 	logger := New(
-		WithLevel(logrus.Level(level)),
+		WithLevel(levelMap[level]),
 		WithCaller(withCaller),
 		WithColor(withColors),
 		WithOut(io.MultiWriter(writers...)),
