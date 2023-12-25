@@ -1,0 +1,20 @@
+version: '3'
+services:
+  query:
+    image: alpine:3.18.4
+    restart: always
+    container_name: da-query
+    ports:
+      - ${DA_PORT}:8080
+    volumes:
+      - ./app:/opt/app
+      - /etc/localtime:/etc/localtime:ro
+    working_dir: /opt/app
+    command: ./app-query
+    networks:
+      - da_network
+
+networks:
+  da_network:
+    driver: bridge
+    name: da_network
