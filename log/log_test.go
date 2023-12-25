@@ -7,7 +7,7 @@ import (
 )
 
 func TestInfo(t *testing.T) {
-	logger, err := NewDefaultLogger("./run.log", time.Hour*24*7, time.Hour*24, 4, true, false, true, true)
+	logger, err := NewDefaultLogger("./run.log", time.Hour*24*7, time.Hour*24, WarnLevelStr, true, false, true, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -30,7 +30,7 @@ func TestInfo(t *testing.T) {
 }
 
 func BenchmarkName(b *testing.B) {
-	logger, err := NewDefaultLogger("/dev/null", time.Hour*24*7, time.Hour*24, 4, true, false, true, false)
+	logger, err := NewDefaultLogger("/dev/null", time.Hour*24*7, time.Hour*24, WarnLevelStr, true, false, true, false)
 	if err != nil {
 		fmt.Println(err)
 		return
