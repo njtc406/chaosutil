@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// TODO 差一个文件日志,这个日志是用来写入一些统计日志的,所以格式上可能会和其他不太一样,只需要数据,不需要附加信息
+// TODO 差一个文件日志,这个日志是用来写入一些统计日志的,所以格式上可能会和其他不太一样,只需要数据,不需要附加信息,可以接入kafka
 // TODO 同时可以增加一个文件日志切分后的自动上传,远端收到文件直接分析文件内容
 
 type Logger = logrus.Logger
@@ -179,6 +179,8 @@ type ILogger interface {
 	Panicln(args ...interface{})
 
 	Exit(code int)
+	Writer() *io.PipeWriter
+	WriterLevel(level Level) *io.PipeWriter
 }
 
 // NewDefaultLogger 创建一个通用日志对象
