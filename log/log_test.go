@@ -7,7 +7,7 @@ import (
 )
 
 func TestInfo(t *testing.T) {
-	logger, err := NewDefaultLogger("./run.log", time.Hour*24*7, time.Hour*24, WarnLevelStr, true, false, true, true)
+	logger, err := NewDefaultLogger("./", "test", time.Hour*24*7, time.Hour*24, DebugLevelStr, true, false, true, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -19,18 +19,26 @@ func TestInfo(t *testing.T) {
 	}()
 	start := time.Now()
 	logger.Debug("-----------debug test")
-	end := time.Now()
-	fmt.Println(end.Sub(start))
+
 	//Logs.Fatal("fatal test")
 	//Logs.Panic("panic test")
 	logger.Info("-----------info test")
 	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
+	logger.Error("-----------error test")
 
+	end := time.Now()
+	fmt.Println(end.Sub(start))
 	Release(logger)
 }
 
 func BenchmarkName(b *testing.B) {
-	logger, err := NewDefaultLogger("/dev/null", time.Hour*24*7, time.Hour*24, WarnLevelStr, true, false, true, false)
+	logger, err := NewDefaultLogger("/dev/", "null", time.Hour*24*7, time.Hour*24, WarnLevelStr, true, false, true, false)
 	if err != nil {
 		fmt.Println(err)
 		return
