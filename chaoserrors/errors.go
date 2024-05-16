@@ -70,6 +70,11 @@ func (e *ErrCode) GetCode() int {
 	return e.Code
 }
 
+// GetMsg 获取错误信息
+func (e *ErrCode) GetMsg() string {
+	return e.Msg
+}
+
 // NewErrCode 新建错误码
 func NewErrCode(code int, msg string, preMsg error) CError {
 	errCode := &ErrCode{
