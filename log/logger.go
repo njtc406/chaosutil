@@ -281,7 +281,7 @@ func NewDefaultLogger(filePath, fileName string, maxAge, rotationTime time.Durat
 	)
 
 	// 由于是追加模式,所以默认为无锁(gpt认为这里在多线程环境中可能会产生一些问题,在使用中确实遇到过)
-	logger.SetNoLock()
+	//logger.SetNoLock()
 
 	return logger, nil
 }
