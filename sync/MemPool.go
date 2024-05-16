@@ -31,8 +31,6 @@ func (pool *Pool) Get() interface{} {
 	default:
 		return pool.syncPool.Get()
 	}
-
-	return nil
 }
 
 func (pool *Pool) Put(data interface{}) {
@@ -44,6 +42,7 @@ func (pool *Pool) Put(data interface{}) {
 
 }
 
+// NewPool 新建缓存池
 func NewPool(C chan interface{}, New func() interface{}) *Pool {
 	var p Pool
 	p.C = C
