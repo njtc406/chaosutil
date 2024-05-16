@@ -21,6 +21,7 @@ type CError interface {
 	GetErrCode() int
 	EqualErrCode(int) bool
 	GetCode() int
+	GetMsg() string
 }
 
 // ErrCode 错误码对象
