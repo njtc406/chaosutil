@@ -3,7 +3,7 @@ package log
 import (
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"github.com/njtc406/logrus"
 	"runtime"
 	"sort"
 	"strings"

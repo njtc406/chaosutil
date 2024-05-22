@@ -6,7 +6,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"github.com/njtc406/logrus"
 )
 
 // CallerHook 增加调用者信息的钩子(由于调用者被集成到了Format函数中,所以这里暂时废弃)

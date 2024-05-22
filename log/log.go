@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/sirupsen/logrus"
+	"github.com/njtc406/logrus"
 	"io"
 )
 

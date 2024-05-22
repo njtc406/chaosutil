@@ -9,12 +9,12 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/gorilla/websocket v1.5.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/njtc406/logrus v1.1.0
 	github.com/panjf2000/ants/v2 v2.9.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rpcxio/libkv v0.5.1
 	github.com/rpcxio/rpcx-etcd v0.2.0
-	github.com/sirupsen/logrus v1.9.0
 	github.com/smallnest/rpcx v1.8.7
 	github.com/tealeg/xlsx v1.0.5
 	go.etcd.io/etcd/client/v3 v3.5.1
