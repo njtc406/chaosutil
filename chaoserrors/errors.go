@@ -18,7 +18,7 @@ import (
 
 type CError interface {
 	error
-	GetErrCode() int
+
 	EqualErrCode(int) bool
 	GetCode() int
 	GetMsg() string
@@ -57,10 +57,6 @@ func (e *ErrCode) getAllErr() string {
 	return builder.String()
 }
 
-func (e *ErrCode) GetErrCode() int {
-	return e.Code
-}
-
 // EqualErrCode 比较错误码
 func (e *ErrCode) EqualErrCode(code int) bool {
 	return e.Code == code
@@ -77,7 +73,20 @@ func (e *ErrCode) GetMsg() string {
 }
 
 // NewErrCode 新建错误码
-func NewErrCode(code int, msg string, preMsg error) CError {
+func NewErrCode(code int, args ...interface{}) CError {
+	var msg string
+	var preMsg error
+	if len(args) > 0 {
+		for _, v := range args {
+			switch v.(type) {
+			case string:
+				msg = v.(string)
+			case error:
+				preMsg = v.(error)
+			}
+		}
+	}
+
 	errCode := &ErrCode{
 		Code:   code,
 		Msg:    msg,
