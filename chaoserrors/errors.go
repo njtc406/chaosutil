@@ -19,7 +19,7 @@ import (
 type CError interface {
 	error
 
-	EqualErrCode(int) bool
+	Is(int) bool
 	GetCode() int
 	GetMsg() string
 }
@@ -57,8 +57,8 @@ func (e *ErrCode) getAllErr() string {
 	return builder.String()
 }
 
-// EqualErrCode 比较错误码
-func (e *ErrCode) EqualErrCode(code int) bool {
+// Is 判断错误码是否是code
+func (e *ErrCode) Is(code int) bool {
 	return e.Code == code
 }
 

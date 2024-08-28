@@ -19,6 +19,10 @@ func TestNewErrCode(t *testing.T) {
 	fmt.Println(err)
 	err1 := NewErrCode(2, "错误收集者提示错误", err)
 	fmt.Println(err1)
+	err2 := NewErrCode(3, err1)
+	fmt.Println(err2)
+	err3 := NewErrCode(4)
+	fmt.Println(err3)
 }
 
 func BenchmarkName(b *testing.B) {
